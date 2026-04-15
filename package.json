@@ -1,0 +1,34 @@
+{
+  "name": "@danecodes/roku-log",
+  "version": "0.1.0",
+  "description": "Structured Roku BrightScript log parsing, streaming, and analysis",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "roku",
+    "brightscript",
+    "log",
+    "parser",
+    "streaming"
+  ],
+  "author": "danecodes",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
+  }
+}
