@@ -105,6 +105,53 @@ describe('LogSession', () => {
     expect(session.all).toHaveLength(0);
   });
 
+  describe('getBeacons', () => {
+    it('returns all beacons with no filter', () => {
+      const session = buildSession();
+      expect(session.getBeacons()).toHaveLength(2);
+    });
+
+    it('filters beacons by since', () => {
+      const session = buildSession();
+      const allBeacons = session.beacons;
+      const since = allBeacons[0].timestamp!;
+      // "since" is inclusive of the first beacon's timestamp, so both should match
+      const filtered = session.getBeacons({ since });
+      expect(filtered.length).toBeGreaterThanOrEqual(1);
+      expect(filtered.every((b) => b.timestamp! >= since)).toBe(true);
+    });
+
+    it('filters beacons by until', () => {
+      const session = buildSession();
+      const allBeacons = session.beacons;
+      const until = allBeacons[0].timestamp!;
+      const filtered = session.getBeacons({ until });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].event).toBe('AppLaunchInitiate');
+    });
+
+    it('filters beacons by since and until', () => {
+      const session = buildSession();
+      const allBeacons = session.beacons;
+      const filtered = session.getBeacons({
+        since: allBeacons[0].timestamp!,
+        until: allBeacons[1].timestamp!,
+      });
+      expect(filtered).toHaveLength(2);
+    });
+  });
+
+  it('filters by until timestamp', () => {
+    const session = buildSession();
+    const allEntries = session.all;
+    const timestamped = allEntries.filter((e) => e.timestamp);
+    if (timestamped.length >= 2) {
+      const until = timestamped[0].timestamp!;
+      const filtered = session.filter({ until });
+      expect(filtered.every((e) => e.timestamp && e.timestamp <= until)).toBe(true);
+    }
+  });
+
   it('add works incrementally', () => {
     const session = new LogSession();
     session.add({ type: 'info', raw: 'test', message: 'test' });

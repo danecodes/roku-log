@@ -33,11 +33,20 @@ export class LogSession {
     return this.entries.filter((e): e is BeaconEntry => e.type === 'beacon');
   }
 
+  getBeacons(options?: { since?: Date; until?: Date }): BeaconEntry[] {
+    return this.beacons.filter((b) => {
+      if (options?.since && (!b.timestamp || b.timestamp < options.since)) return false;
+      if (options?.until && (!b.timestamp || b.timestamp > options.until)) return false;
+      return true;
+    });
+  }
+
   filter(options: LogFilterOptions): LogEntry[] {
     return this.entries.filter((entry) => {
       if (options.type && entry.type !== options.type) return false;
       if (options.file && !entry.source?.file.includes(options.file)) return false;
       if (options.since && (!entry.timestamp || entry.timestamp < options.since)) return false;
+      if (options.until && (!entry.timestamp || entry.timestamp > options.until)) return false;
       return true;
     });
   }

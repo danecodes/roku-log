@@ -69,4 +69,5 @@ export interface LogFilterOptions {
   type?: LogEntryType;
   file?: string;
   since?: Date;
+  until?: Date;
 }

@@ -1,6 +1,6 @@
 {
   "name": "@danecodes/roku-log",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Structured Roku BrightScript log parsing, streaming, and analysis",
   "type": "module",
   "exports": {

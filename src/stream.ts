@@ -112,6 +112,50 @@ export class LogStream extends EventEmitter<LogStreamEvents> {
     }
   }
 
+  match(pattern: RegExp, options?: { timeout?: number }): Promise<RegExpMatchArray> {
+    const timeout = options?.timeout ?? 10000;
+    return new Promise((resolve, reject) => {
+      const onRaw = (line: string) => {
+        const m = line.match(pattern);
+        if (m) {
+          cleanup();
+          resolve(m);
+        }
+      };
+
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`match() timed out after ${timeout}ms waiting for ${pattern}`));
+      }, timeout);
+
+      const cleanup = () => {
+        clearTimeout(timer);
+        this.off('raw', onRaw);
+      };
+
+      this.on('raw', onRaw);
+    });
+  }
+
+  matchAll(pattern: RegExp, options?: { duration?: number }): Promise<RegExpMatchArray[]> {
+    const duration = options?.duration ?? 5000;
+    return new Promise((resolve) => {
+      const matches: RegExpMatchArray[] = [];
+
+      const onRaw = (line: string) => {
+        const m = line.match(pattern);
+        if (m) matches.push(m);
+      };
+
+      setTimeout(() => {
+        this.off('raw', onRaw);
+        resolve(matches);
+      }, duration);
+
+      this.on('raw', onRaw);
+    });
+  }
+
   async send(command: string): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.socket || !this.connected) {
