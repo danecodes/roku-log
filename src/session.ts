@@ -60,21 +60,27 @@ export class LogSession {
     );
   }
 
-  summary(): {
+  summary(options?: { since?: Date; until?: Date }): {
     errorCount: number;
     crashCount: number;
     beaconCount: number;
     launchTime?: number;
     uniqueErrors: string[];
   } {
-    const errors = this.errors;
+    const source = options
+      ? this.filter({ ...options }) as LogEntry[]
+      : this.entries;
+
+    const errors = source.filter((e): e is BrightScriptError => e.type === 'error');
+    const crashes = source.filter((e) => e.type === 'crash');
+    const beacons = source.filter((e): e is BeaconEntry => e.type === 'beacon');
     const uniqueErrors = [...new Set(errors.map((e) => e.errorClass))];
-    const launchBeacon = this.beacons.find((b) => b.event === 'AppLaunchComplete');
+    const launchBeacon = beacons.find((b) => b.event === 'AppLaunchComplete');
 
     return {
       errorCount: errors.length,
-      crashCount: this.crashes.length,
-      beaconCount: this.beacons.length,
+      crashCount: crashes.length,
+      beaconCount: beacons.length,
       launchTime: launchBeacon?.duration,
       uniqueErrors,
     };

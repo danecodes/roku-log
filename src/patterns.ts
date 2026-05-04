@@ -5,6 +5,9 @@
 export const BRIGHTSCRIPT_ERROR =
   /^BRIGHTSCRIPT:\s*ERROR:\s*(.+?)(?:\s+in\s+(.+?)\((\d+)\))?$/i;
 
+// BRIGHTSCRIPT: WARNING: {message}
+export const BRIGHTSCRIPT_WARNING = /^BRIGHTSCRIPT:\s*WARNING:\s*(.+)$/i;
+
 // Runtime Error ({description}) in {file}({line})
 export const RUNTIME_ERROR =
   /^Runtime Error\s*\((.+?)\)\s+in\s+(.+?)\((\d+)\)$/i;
@@ -49,6 +52,9 @@ export const BEACON_DURATION = /^\s*([\d.]+)s$/;
 // Timestamped log line: MM/DD HH:MM:SS.mmm [{source}] {message}
 export const TIMESTAMPED_LINE =
   /^(\d{2}\/\d{2})\s+(\d{2}:\d{2}:\d{2}\.\d{3})\s+\[([^\]]+)\]\s+(.*)$/;
+
+// -- crash / channel crash dump
+export const CRASH_MARKER = /^--\s*crash\b/i;
 
 // ------ Compiling dev '{name}' ------
 export const COMPILE_START = /^------\s+Compiling\s+dev\s+'(.+?)'\s+------$/;

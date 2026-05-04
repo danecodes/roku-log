@@ -124,6 +124,62 @@ describe('LogParser', () => {
     });
   });
 
+  describe('warnings', () => {
+    it('parses BRIGHTSCRIPT WARNING lines', () => {
+      const parser = new LogParser();
+      const entries = parser.parse('BRIGHTSCRIPT: WARNING: use of deprecated method "roVideoScreen"');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].type).toBe('warning');
+      expect(entries[0].message).toBe('use of deprecated method "roVideoScreen"');
+    });
+
+    it('is case-insensitive', () => {
+      const parser = new LogParser();
+      const entries = parser.parse('brightscript: warning: something');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].type).toBe('warning');
+    });
+  });
+
+  describe('-- crash marker', () => {
+    it('parses -- crash lines as crash type', () => {
+      const parser = new LogParser();
+      const entries = parser.parse('-- crash detected in channel');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].type).toBe('crash');
+    });
+  });
+
+  describe('PAUSE (breakpoint)', () => {
+    it('parses PAUSE as debug type, not crash', () => {
+      const parser = new LogParser();
+      const entries = parser.parse('PAUSE in pkg:/components/Foo.brs(10)\n');
+      const debugEntries = entries.filter((e) => e.type === 'debug');
+      expect(debugEntries).toHaveLength(1);
+      expect((debugEntries[0] as Backtrace).source?.file).toBe('pkg:/components/Foo.brs');
+    });
+
+    it('collects backtrace frames for PAUSE entries', () => {
+      const parser = new LogParser();
+      const input = [
+        'PAUSE in pkg:/foo.brs(10)',
+        '',
+        'Backtrace:',
+        '#0  Function main() As Void',
+        '     file/line: pkg:/foo.brs(10)',
+        '',
+        'Local Variables:',
+        'x            Integer',
+        '',
+      ].join('\n');
+      const entries = parser.parse(input);
+      const debug = entries.find((e): e is Backtrace => e.type === 'debug')!;
+      expect(debug).toBeDefined();
+      expect(debug.frames).toHaveLength(1);
+      expect(debug.localVariables).toEqual({ x: 'Integer' });
+    });
+  });
+
   describe('beacons', () => {
     it('parses beacon header events', () => {
       const parser = new LogParser();
@@ -237,6 +293,91 @@ describe('LogParser', () => {
       const crashes = allEntries.filter((e) => e.type === 'crash');
       expect(crashes).toHaveLength(1);
     });
+  });
+});
+
+describe('parser edge cases', () => {
+  it('handles lines with no recognizable pattern', () => {
+    const parser = new LogParser();
+    const entries = parser.parse('just some random text\nanother line');
+    expect(entries).toHaveLength(2);
+    expect(entries.every((e) => e.type === 'info')).toBe(true);
+  });
+
+  it('handles empty input', () => {
+    const parser = new LogParser();
+    const entries = parser.parse('');
+    expect(entries).toHaveLength(0);
+  });
+
+  it('handles input that is only blank lines', () => {
+    const parser = new LogParser();
+    const entries = parser.parse('\n\n\n');
+    expect(entries).toHaveLength(0);
+  });
+
+  it('handles truncated backtrace (no frames, ends with flush)', () => {
+    const parser = new LogParser();
+    const entries = parser.parse('STOP in pkg:/foo.brs(5)');
+    // flush should emit the partial crash
+    expect(entries).toHaveLength(1);
+    expect(entries[0].type).toBe('crash');
+    expect((entries[0] as Backtrace).frames).toHaveLength(0);
+  });
+
+  it('handles error continuation that never gets a file/line', () => {
+    const parser = new LogParser();
+    const input = [
+      'BRIGHTSCRIPT: ERROR: something went wrong:',
+      '   more context about the error',
+      '',
+      '09/15 14:02:33.100 [scrpt.cmn.main.brs] next line',
+    ].join('\n');
+    const entries = parser.parse(input);
+    const errors = entries.filter((e) => e.type === 'error');
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain('more context');
+  });
+
+  it('handles backtrace frame without subsequent file/line', () => {
+    const parser = new LogParser();
+    const input = [
+      'Backtrace:',
+      '#0  Function main() As Void',
+      '',
+    ].join('\n');
+    const entries = parser.parse(input);
+    const crashes = entries.filter((e): e is Backtrace => e.type === 'crash');
+    expect(crashes).toHaveLength(1);
+    expect(crashes[0].frames).toHaveLength(1);
+    expect(crashes[0].frames[0].file).toBe('');
+  });
+
+  it('handles multiple errors in sequence', () => {
+    const parser = new LogParser();
+    const input = [
+      'BRIGHTSCRIPT: ERROR: first error in pkg:/a.brs(1)',
+      'BRIGHTSCRIPT: ERROR: second error in pkg:/b.brs(2)',
+      'Runtime Error (bad thing) in pkg:/c.brs(3)',
+    ].join('\n');
+    const entries = parser.parse(input);
+    const errors = entries.filter((e) => e.type === 'error');
+    expect(errors).toHaveLength(3);
+  });
+
+  it('handles interleaved crash and error', () => {
+    const parser = new LogParser();
+    const input = [
+      'STOP in pkg:/foo.brs(10)',
+      '',
+      'Local Variables:',
+      'x            String',
+      '',
+      'BRIGHTSCRIPT: ERROR: oops in pkg:/bar.brs(20)',
+    ].join('\n');
+    const entries = parser.parse(input);
+    expect(entries.filter((e) => e.type === 'crash')).toHaveLength(1);
+    expect(entries.filter((e) => e.type === 'error')).toHaveLength(1);
   });
 });
 

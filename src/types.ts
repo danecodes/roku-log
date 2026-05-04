@@ -1,4 +1,4 @@
-export type LogEntryType = 'info' | 'error' | 'crash' | 'beacon' | 'compile' | 'debug';
+export type LogEntryType = 'info' | 'warning' | 'error' | 'crash' | 'beacon' | 'compile' | 'debug';
 
 export interface LogSource {
   file: string;
@@ -29,7 +29,7 @@ export interface BacktraceFrame {
 }
 
 export interface Backtrace extends LogEntry {
-  type: 'crash';
+  type: 'crash' | 'debug';
   frames: BacktraceFrame[];
   localVariables?: Record<string, string>;
   currentLine?: { number: number; text: string };

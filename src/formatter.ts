@@ -20,6 +20,8 @@ export class LogFormatter {
     switch (entry.type) {
       case 'error':
         return this.wrap(RED, entry.raw);
+      case 'warning':
+        return this.wrap(YELLOW, entry.raw);
       case 'crash':
         return this.formatCrash(entry as Backtrace);
       case 'beacon':

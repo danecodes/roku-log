@@ -46,6 +46,10 @@ export class LogStream extends EventEmitter<LogStreamEvents> {
     this.currentReconnectDelay = this.reconnectDelay;
   }
 
+  get isConnected(): boolean {
+    return this.connected;
+  }
+
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.socket = createConnection({ host: this.host, port: this.port }, () => {
@@ -110,6 +114,33 @@ export class LogStream extends EventEmitter<LogStreamEvents> {
       this.iteratorResolve({ value: undefined, done: true });
       this.iteratorResolve = null;
     }
+  }
+
+  waitFor(
+    predicate: (entry: LogEntry) => boolean,
+    options?: { timeout?: number },
+  ): Promise<LogEntry> {
+    const timeout = options?.timeout ?? 10000;
+    return new Promise((resolve, reject) => {
+      const onEntry = (entry: LogEntry) => {
+        if (predicate(entry)) {
+          cleanup();
+          resolve(entry);
+        }
+      };
+
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`waitFor() timed out after ${timeout}ms`));
+      }, timeout);
+
+      const cleanup = () => {
+        clearTimeout(timer);
+        this.off('entry', onEntry);
+      };
+
+      this.on('entry', onEntry);
+    });
   }
 
   match(pattern: RegExp, options?: { timeout?: number }): Promise<RegExpMatchArray> {

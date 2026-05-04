@@ -85,6 +85,19 @@ describe('LogSession', () => {
     expect(summary.uniqueErrors.length).toBeGreaterThan(0);
   });
 
+  it('produces a scoped summary with since/until', () => {
+    const session = buildSession();
+    const beacons = session.beacons;
+    // Scope to only the first beacon's timestamp — should exclude later entries
+    const summary = session.summary({
+      since: beacons[0].timestamp!,
+      until: beacons[0].timestamp!,
+    });
+    expect(summary.beaconCount).toBe(1);
+    // Errors don't have timestamps so they won't appear in a time-scoped summary
+    expect(summary.errorCount).toBe(0);
+  });
+
   it('exports to JSON', () => {
     const session = buildSession();
     const json = session.toJSON() as any;

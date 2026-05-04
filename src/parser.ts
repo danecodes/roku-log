@@ -72,8 +72,8 @@ export class LogParser {
   }
 
   private handleNormal(line: string): LogEntry[] {
-    // STOP / PAUSE — start of a crash block
-    const stopMatch = line.match(pat.STOP_IN) || line.match(pat.PAUSE_IN);
+    // STOP — start of a crash block
+    const stopMatch = line.match(pat.STOP_IN);
     if (stopMatch) {
       const entry: Backtrace = {
         type: 'crash',
@@ -81,6 +81,20 @@ export class LogParser {
         message: line.trim(),
         frames: [],
         source: { file: stopMatch[1], line: Number(stopMatch[2]) },
+      };
+      this.state = { mode: 'backtrace', entry };
+      return [];
+    }
+
+    // PAUSE — breakpoint hit, not a crash
+    const pauseMatch = line.match(pat.PAUSE_IN);
+    if (pauseMatch) {
+      const entry: Backtrace = {
+        type: 'debug',
+        raw: line,
+        message: line.trim(),
+        frames: [],
+        source: { file: pauseMatch[1], line: Number(pauseMatch[2]) },
       };
       this.state = { mode: 'backtrace', entry };
       return [];
@@ -98,6 +112,15 @@ export class LogParser {
       return [];
     }
 
+    // -- crash marker
+    if (pat.CRASH_MARKER.test(line)) {
+      return [{
+        type: 'crash',
+        raw: line,
+        message: line.trim(),
+      }];
+    }
+
     // Runtime Error ({desc}) in {file}({line})
     const runtimeMatch = line.match(pat.RUNTIME_ERROR);
     if (runtimeMatch) {
@@ -111,6 +134,16 @@ export class LogParser {
         source: { file: runtimeMatch[2], line: Number(runtimeMatch[3]) },
       };
       return [entry];
+    }
+
+    // BRIGHTSCRIPT: WARNING: ...
+    const warnMatch = line.match(pat.BRIGHTSCRIPT_WARNING);
+    if (warnMatch) {
+      return [{
+        type: 'warning',
+        raw: line,
+        message: warnMatch[1],
+      }];
     }
 
     // BRIGHTSCRIPT: ERROR: ...
